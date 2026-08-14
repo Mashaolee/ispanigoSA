@@ -1099,7 +1099,7 @@
 
                         <button onclick="startModule('Interview Etiquette & Confidence', 'data_analyst')" class="w-full bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5">
                             <i data-lucide="play-circle" class="w-4 h-4"></i>
-                            <span>Start Mock Interview Prep</span>
+                            <span>Start AI Mock Interview Prep</span>
                         </button>
                     </div>
 
@@ -1453,6 +1453,21 @@
                         </div>
                     </div>
 
+                    <div class="bg-red-50 border border-red-100 rounded-2xl p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                <i data-lucide="youtube" class="w-4 h-4 text-red-600"></i>
+                                <div>
+                                    <span class="text-[9px] uppercase font-bold text-red-600 tracking-wider">Role Preparation</span>
+                                    <h4 id="voice-role-prep-title" class="font-bold text-slate-900 text-xs">YouTube prep for this job</h4>
+                                </div>
+                            </div>
+                            <span id="voice-role-prep-status" class="text-[9px] font-bold text-red-600">Preparing...</span>
+                        </div>
+                        <p id="voice-job-criteria" class="text-[10px] text-slate-600">AI is matching this interview to the job criteria...</p>
+                        <div id="voice-youtube-links" class="space-y-1.5"></div>
+                    </div>
+
                     <!-- Recording Interactive Area -->
                     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center space-y-3">
                         <div id="rec-status-container" class="space-y-1">
@@ -1569,11 +1584,44 @@
                             <p id="tech-q2-ans" class="text-slate-600 text-[11px]">Ans</p>
                         </div>
                     </div>
+
+                    <div class="bg-violet-50 border border-violet-200 rounded-xl p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-[9px] uppercase font-bold text-violet-700 tracking-wider">AI-Powered Prep</span>
+                                <h4 class="font-bold text-violet-950 text-xs">Questions based on this job</h4>
+                            </div>
+                            <span id="ai-prep-status" class="text-[9px] font-bold text-violet-600">Preparing...</span>
+                        </div>
+                        <div id="ai-prep-questions" class="space-y-1.5 text-[11px] text-violet-950">
+                            <p class="text-violet-700">The AI interviewer is analysing the role criteria and your CV...</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-red-50 border border-red-100 rounded-xl p-3 space-y-2">
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="youtube" class="w-4 h-4 text-red-600"></i>
+                            <div>
+                                <span class="text-[9px] uppercase font-bold text-red-600 tracking-wider">Recommended Learning</span>
+                                <h4 class="font-bold text-slate-900 text-xs">YouTube prep based on job criteria</h4>
+                            </div>
+                        </div>
+                        <div id="ai-prep-videos" class="space-y-1.5">
+                            <p class="text-[10px] text-slate-500">AI-generated role topics will appear here.</p>
+                        </div>
+                        <p class="text-[9px] text-slate-400">Prototype links open YouTube search results for the selected job skills.</p>
+                    </div>
                 </div>
 
-                <button onclick="closeRoleModuleModal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs transition-all shadow-md">
-                    Got It! Close Prep
-                </button>
+                <div class="flex gap-2 pt-2 border-t border-slate-100">
+                    <button onclick="closeRoleModuleModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition-all">
+                        Close
+                    </button>
+                    <button onclick="closeRoleModuleModal(); openVoiceInterviewModal(activeInterviewRole)" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5">
+                        <i data-lucide="mic" class="w-4 h-4"></i>
+                        Start AI Mock Interview
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -2395,6 +2443,132 @@
             showToast("Exporting Master Digital CV (PDF / Free Mode)...");
         }
 
+        // ================= AI JOB-CRITERIA INTERVIEW PREP =================
+        const ROLE_JOB_CRITERIA = {
+            data_analyst: {
+                title: "Junior Data Analyst",
+                company: "TechCorp SA",
+                qualification: "Diploma/degree in IT, Data Science, Statistics, or a related field.",
+                skills: ["Excel", "SQL", "data cleaning", "data visualisation", "dashboards", "communication"],
+                criteria: "Graduate-friendly role requiring Excel, basic-to-intermediate SQL, data cleaning, dashboards/data visualisation and the ability to explain findings to non-technical stakeholders."
+            },
+            it_support: {
+                title: "IT Support / Junior IT Technician",
+                company: "Cloud Systems SA",
+                qualification: "Diploma in IT, Networking, Computer Science, or related field.",
+                skills: ["Windows", "Active Directory", "LAN/WAN troubleshooting", "DNS", "DHCP", "ticketing", "customer service"],
+                criteria: "Entry-level support role requiring Windows troubleshooting, basic Active Directory, LAN/WAN troubleshooting, DNS/DHCP fundamentals, ticket handling and clear communication with users."
+            },
+            software: {
+                title: "Junior Software Developer",
+                company: "CodeWorks SA",
+                qualification: "Diploma/degree in IT, Computer Science, Software Engineering, or related field.",
+                skills: ["JavaScript", "Python", "Git", "APIs", "debugging", "problem solving"],
+                criteria: "Graduate-friendly development role requiring programming fundamentals, Git, APIs, debugging, problem solving and the ability to explain technical decisions."
+            }
+        };
+
+        let activeInterviewRole = 'data_analyst';
+        let activeInterviewPlan = null;
+        let interviewPrepGenerating = false;
+
+        function getRoleJobCriteria(role = activeInterviewRole) {
+            return ROLE_JOB_CRITERIA[role] || ROLE_JOB_CRITERIA.data_analyst;
+        }
+
+        function youtubeSearchUrl(query) {
+            return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+        }
+
+        function renderYoutubeLinks(containerId, topics, role) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const roleInfo = getRoleJobCriteria(role);
+            const cleanTopics = (topics || []).filter(Boolean).slice(0, 4);
+            const finalTopics = cleanTopics.length ? cleanTopics : roleInfo.skills.slice(0, 4);
+            container.innerHTML = finalTopics.map(topic => {
+                const query = `${roleInfo.title} ${topic} tutorial interview preparation`;
+                return `<a href="${youtubeSearchUrl(query)}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 bg-white border border-red-100 rounded-lg px-2.5 py-2 text-[10px] font-semibold text-red-700 hover:bg-red-100 transition-all"><i data-lucide="play-circle" class="w-3.5 h-3.5 shrink-0"></i><span>${escapeHtml(topic)}</span><span class="ml-auto text-[9px] text-red-400">YouTube ↗</span></a>`;
+            }).join('');
+            safeCreateIcons();
+        }
+
+        function parseAiJson(text) {
+            const cleaned = String(text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+            try { return JSON.parse(cleaned); } catch (e) {}
+            const match = cleaned.match(/\{[\s\S]*\}/);
+            if (match) {
+                try { return JSON.parse(match[0]); } catch (e) {}
+            }
+            return null;
+        }
+
+        async function generateInterviewPrepPlan(role = activeInterviewRole) {
+            if (interviewPrepGenerating && activeInterviewPlan) return activeInterviewPlan;
+            interviewPrepGenerating = true;
+            activeInterviewRole = role;
+            const job = getRoleJobCriteria(role);
+            const system = `You are IspaniGo SA's interview preparation engine.
+Return ONLY valid JSON in this exact shape:
+{"questions":["q1","q2","q3","q4","q5"],"topics":["topic1","topic2","topic3","topic4"]}
+Create exactly five realistic interview questions based on the job criteria and the candidate's real CV.
+Question flow: motivation/fit, behavioural, technical, scenario/troubleshooting, closing.
+Technical questions must reflect the role's required skills.
+Topics must be practical learning topics directly connected to the job criteria.
+Never invent candidate experience. Keep each question under 30 words.`;
+
+            try {
+                const raw = await callGeminiAPI(
+                    [{ role: 'user', content: `JOB TITLE: ${job.title}
+COMPANY: ${job.company}
+QUALIFICATION: ${job.qualification}
+JOB CRITERIA: ${job.criteria}
+REQUIRED SKILLS: ${job.skills.join(', ')}
+
+${getCandidateCvContext()}` }],
+                    system,
+                    700
+                );
+                const plan = parseAiJson(raw);
+                if (!plan || !Array.isArray(plan.questions) || plan.questions.length < 5) throw new Error('Invalid AI plan');
+                activeInterviewPlan = {
+                    questions: plan.questions.slice(0, 5),
+                    topics: Array.isArray(plan.topics) && plan.topics.length ? plan.topics.slice(0, 4) : job.skills.slice(0, 4)
+                };
+            } catch (err) {
+                console.warn('Interview prep generation failed:', err);
+                activeInterviewPlan = {
+                    questions: [
+                        `Tell me about yourself and why you're interested in the ${job.title} role.`,
+                        `Tell me about a time you solved a difficult problem and what you learned.`,
+                        `Which of the required skills are you most confident with, and how have you used it?`,
+                        `Imagine you are given a task you have never done before. How would you approach it?`,
+                        `What questions would you ask us at the end of this interview?`
+                    ],
+                    topics: job.skills.slice(0, 4)
+                };
+            } finally {
+                interviewPrepGenerating = false;
+            }
+            return activeInterviewPlan;
+        }
+
+        async function renderRoleAiPrep(role = activeInterviewRole) {
+            const status = document.getElementById('ai-prep-status');
+            const questionsEl = document.getElementById('ai-prep-questions');
+            const videosEl = document.getElementById('ai-prep-videos');
+            if (status) status.innerText = "Preparing...";
+            if (questionsEl) questionsEl.innerHTML = `<p class="text-violet-700">AI is analysing the job criteria and your CV...</p>`;
+            if (videosEl) videosEl.innerHTML = `<p class="text-[10px] text-slate-500">Finding learning topics...</p>`;
+            const plan = await generateInterviewPrepPlan(role);
+            if (questionsEl) questionsEl.innerHTML = plan.questions.map((q, i) =>
+                `<div class="bg-white border border-violet-100 rounded-lg p-2"><b class="text-violet-700">Q${i + 1}</b> <span class="text-slate-800">${escapeHtml(q)}</span></div>`
+            ).join('');
+            if (status) status.innerText = "AI Ready";
+            renderYoutubeLinks('ai-prep-videos', plan.topics, role);
+            return plan;
+        }
+
         // ================= LIVE AI VOICE INTERVIEW (real speech recognition + real Gemini API, CV-aware) =================
         const VOICE_INTERVIEW_SYSTEM_PROMPT = `
 You are a realistic, warm but professional human-style interviewer conducting a five-question mock interview for an entry-level South African job candidate.
@@ -2412,6 +2586,7 @@ Interview behaviour:
 - Do not say "Question 1", "Question:", or give multiple questions at once.
 - Do not give a long lecture before the question.
 - For the first turn, briefly welcome the candidate and then ask the opening question.
+- Prioritise the supplied job criteria and AI-generated interview plan over generic interview questions.
 Return only what the interviewer should say aloud.
 `;
 
@@ -2549,7 +2724,9 @@ Format exactly:
             if (text) speakText(text);
         }
 
-        async function openVoiceInterviewModal() {
+        async function openVoiceInterviewModal(roleContext = activeInterviewRole) {
+            activeInterviewRole = roleContext || activeInterviewRole || 'data_analyst';
+            const job = getRoleJobCriteria(activeInterviewRole);
             document.getElementById('voice-modal').classList.remove('hidden');
             initSpeechRecognition();
             document.getElementById('voice-speech-support').innerText =
@@ -2563,18 +2740,38 @@ Format exactly:
             document.getElementById('ai-feedback-box').classList.add('hidden');
             document.getElementById('recording-preview-wrap').classList.add('hidden');
             document.getElementById('voice-answer-text').value = '';
-            document.getElementById('voice-question-text').innerText = "Good to meet you. Let's get started...";
-            document.getElementById('voice-question-counter').innerText = "Starting interview...";
+            document.getElementById('voice-question-text').innerText = "Preparing your interview...";
+            document.getElementById('voice-question-counter').innerText = "AI is analysing the job criteria";
+            document.getElementById('voice-role-prep-title').innerText = `YouTube prep for ${job.title}`;
+            document.getElementById('voice-job-criteria').innerText = job.criteria;
+            document.getElementById('voice-role-prep-status').innerText = "Preparing...";
+            document.getElementById('voice-youtube-links').innerHTML = `<p class="text-[10px] text-slate-500">AI is selecting relevant learning topics...</p>`;
 
             try {
                 voiceInterviewBusy = true;
                 setVoiceLoading(true);
-                const firstUserTurn = { role: 'user', content: "Start the interview naturally. Greet me briefly and ask the first realistic question." };
+                const plan = await generateInterviewPrepPlan(activeInterviewRole);
+                renderYoutubeLinks('voice-youtube-links', plan.topics, activeInterviewRole);
+                document.getElementById('voice-role-prep-status').innerText = "Ready";
+
+                const firstUserTurn = {
+                    role: 'user',
+                    content: `Start a realistic interview for the ${job.title} role at ${job.company}. Greet the candidate briefly and ask this planned opening question naturally: ${plan.questions[0]}`
+                };
                 voiceInterviewHistory.push(firstUserTurn);
                 const question = await callGeminiAPI(
                     voiceInterviewHistory,
-                    `${VOICE_INTERVIEW_SYSTEM_PROMPT}\n\n${getCandidateCvContext()}`,
-                    320
+                    `${VOICE_INTERVIEW_SYSTEM_PROMPT}
+
+JOB CRITERIA:
+${job.criteria}
+Required skills: ${job.skills.join(', ')}
+
+AI-GENERATED INTERVIEW PLAN:
+${plan.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+${getCandidateCvContext()}`,
+                    420
                 );
                 voiceQuestionCount = 1;
                 voiceInterviewHistory.push({ role: 'assistant', content: question });
@@ -2583,8 +2780,13 @@ Format exactly:
                 speakText(question);
             } catch (err) {
                 console.error('Voice interview start error:', err);
-                document.getElementById('voice-question-text').innerText = "I couldn't connect to the live interviewer. You can still practise by typing your answer.";
-                document.getElementById('voice-question-counter').innerText = "Connection error";
+                const fallback = activeInterviewPlan || await generateInterviewPrepPlan(activeInterviewRole);
+                renderYoutubeLinks('voice-youtube-links', fallback.topics, activeInterviewRole);
+                document.getElementById('voice-role-prep-status').innerText = "Demo fallback";
+                document.getElementById('voice-question-text').innerText = fallback.questions[0];
+                document.getElementById('voice-question-counter').innerText = `Question 1 of ${VOICE_MAX_QUESTIONS}`;
+                voiceQuestionCount = 1;
+                voiceInterviewHistory.push({ role: 'assistant', content: fallback.questions[0] });
             } finally {
                 voiceInterviewBusy = false;
                 setVoiceLoading(false);
@@ -2699,12 +2901,30 @@ Format exactly:
 
             try {
                 const isLastQuestion = voiceQuestionCount >= VOICE_MAX_QUESTIONS;
+                const job = getRoleJobCriteria(activeInterviewRole);
+                const planText = activeInterviewPlan
+                    ? activeInterviewPlan.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')
+                    : '';
                 const systemPrompt = isLastQuestion
                     ? `${VOICE_FEEDBACK_SYSTEM_PROMPT}
 For the final question, give the brief acknowledgement and feedback, then say that the interview is complete. Do not include ---NEXT QUESTION---.
+JOB CRITERIA:
+${job.criteria}
+Required skills: ${job.skills.join(', ')}
+AI INTERVIEW PLAN:
+${planText}
 Candidate CV:
 ${getCandidateCvContext()}`
-                    : `${VOICE_FEEDBACK_SYSTEM_PROMPT}\n\nCandidate CV:\n${getCandidateCvContext()}`;
+                    : `${VOICE_FEEDBACK_SYSTEM_PROMPT}
+
+JOB CRITERIA:
+${job.criteria}
+Required skills: ${job.skills.join(', ')}
+AI INTERVIEW PLAN:
+${planText}
+
+Candidate CV:
+${getCandidateCvContext()}`;
 
                 const raw = await callGeminiAPI(voiceInterviewHistory, systemPrompt, 500);
                 voiceInterviewHistory.push({ role: 'assistant', content: raw });
@@ -2958,7 +3178,7 @@ ${getCandidateCvContext()}`
                     <p class="text-sky-800 text-[11px]">Popular HR & Technical questions generated for this role.</p>
                 </div>
 
-                <button onclick="startModule('Interview Etiquette & Confidence', '${roleType}')" class="w-full bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm flex items-center justify-center gap-1.5">
+                <button onclick="openRoleModule('${roleType}')" class="w-full bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm flex items-center justify-center gap-1.5">
                     <i data-lucide="play-circle" class="w-4 h-4"></i>
                     <span>Start Mock Interview Prep</span>
                 </button>
@@ -3020,7 +3240,8 @@ ${getCandidateCvContext()}`
             showToast("Lesson Completed! Readiness score updated.");
         }
 
-        function openRoleModule(role) {
+        async function openRoleModule(role) {
+            activeInterviewRole = role || 'data_analyst';
             const modal = document.getElementById('role-module-modal');
             const badge = document.getElementById('role-badge');
             const title = document.getElementById('role-title');
