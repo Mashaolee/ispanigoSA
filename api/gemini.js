@@ -47,9 +47,9 @@ module.exports = async function handler(req, res) {
       parts: [{ text: m.content.slice(0, MAX_INPUT_CHARS) }]
     }));
 
-  const totalChars =
-    safeSystem.length +
-    safeMessages.reduce((sum, m) => sum + m.parts[0].text.length, 0);
+  const totalChars = safeSystem.length + safeMessages.reduce(
+    (sum, m) => sum + m.parts[0].text.length, 0
+  );
 
   if (totalChars > MAX_INPUT_CHARS) {
     return json(res, 413, { error: "The request is too large." });
@@ -60,15 +60,12 @@ module.exports = async function handler(req, res) {
     MAX_OUTPUT_TOKENS
   );
 
+  // Gemini 3.5 Flash currently expects the newer generation settings;
+  // avoid deprecated sampling fields such as temperature.
   const payload = {
-    system_instruction: {
-      parts: [{ text: safeSystem }]
-    },
+    system_instruction: { parts: [{ text: safeSystem }] },
     contents: safeMessages,
-    generationConfig: {
-      maxOutputTokens,
-      temperature: 0.6
-    }
+    generationConfig: { maxOutputTokens }
   };
 
   try {
@@ -87,32 +84,24 @@ module.exports = async function handler(req, res) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const message =
-        data?.error?.message ||
-        `Gemini API returned HTTP ${response.status}.`;
-      return json(res, response.status >= 500 ? 502 : response.status, {
-        error: message
-      });
+      const message = data?.error?.message || `Gemini API returned HTTP ${response.status}.`;
+      console.error("Gemini API error:", response.status, message);
+      return json(res, response.status >= 500 ? 502 : response.status, { error: message });
     }
 
-    const text =
-      data?.candidates?.[0]?.content?.parts
-        ?.filter(part => typeof part.text === "string")
-        .map(part => part.text)
-        .join("\n")
-        .trim() || "";
+    const text = data?.candidates?.[0]?.content?.parts
+      ?.filter(part => typeof part.text === "string")
+      .map(part => part.text)
+      .join("\n")
+      .trim() || "";
 
     if (!text) {
-      return json(res, 502, {
-        error: "Gemini returned no text. Please try again."
-      });
+      return json(res, 502, { error: "Gemini returned no text. Please try again." });
     }
 
     return json(res, 200, { text });
   } catch (error) {
     console.error("Gemini proxy error:", error);
-    return json(res, 502, {
-      error: "Unable to reach the Gemini AI service right now."
-    });
+    return json(res, 502, { error: "Unable to reach the Gemini AI service right now." });
   }
 };
